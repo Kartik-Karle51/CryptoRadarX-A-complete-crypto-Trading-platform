@@ -1,0 +1,41 @@
+package com.example.demo.Controller;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/chat")
+@CrossOrigin(origins = "*")
+public class ChatController {
+
+    @Value("${openai.api.key}")
+    private String openAiApiKey;
+
+    @PostMapping
+    public Map<String, String> chatWithBot(@RequestBody Map<String, String> request) {
+        String userMessage = request.get("message");
+        String apiUrl = "https://api.openai.com/v1/chat/completions";
+
+        // Create Request Payload
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "gpt-3.5-turbo");
+        requestBody.put("messages", List.of(Map.of("role", "user", "content", userMessage)));
+
+        // Set Headers
+        Map<String, String> headers = Map.of(
+            "Authorization", "Bearer " + openAiApiKey,
+            "Content-Type", "application/json"
+        );
+
+        // Call OpenAI API
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, Object> response = restTemplate.postForObject(apiUrl, requestBody, Map.class, headers);
+
+        // Extract response message
+        String botReply = ((List<Map<String, String>>) response.get("choices")).get(0).get("message");
+
+        return Map.of("response", botReply);
+    }
+}
