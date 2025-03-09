@@ -1,0 +1,19 @@
+//package com.example.demo.Service;
+//
+//import org.springframework.stereotype.Service;
+//
+//import com.example.demo.Model.TwoFactorOTP;
+//import com.example.demo.Model.User;
+//
+//public interface TwoFactorOTPService {
+//
+//	TwoFactorOTP createTwoFactorOTP(User user,String otp,String jwt);
+//	
+//	TwoFactorOTP findByUser(Long userId);
+//	
+//	TwoFactorOTP findById(String id);
+//	
+//	boolean verifytwoFactorOtp(TwoFactorOTP twoFactorOTP,String otp);
+//	
+//	void deleteTwoFactorOtp(TwoFactorOTP twoFactorOTP);
+//}

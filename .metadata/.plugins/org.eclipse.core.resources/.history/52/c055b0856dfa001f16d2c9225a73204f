@@ -1,0 +1,202 @@
+package com.example.demo.Controller;
+
+
+
+import java.util.Collections;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.webauthn.api.AuthenticatorResponse;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.Model.TwoFactorOTP;
+import com.example.demo.Model.User;
+import com.example.demo.Repository.UserRepository;
+import com.example.demo.Response.AuthResponse;
+import com.example.demo.Service.CustomUserDetailsService;
+import com.example.demo.Service.EmailService;
+import com.example.demo.Service.TwoFactorOTPService;
+import com.example.demo.Service.WatchListService;
+import com.example.demo.Utils.OtpUtils;
+import com.example.demo.config.JwtProvider;
+
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+	@Autowired
+	private UserRepository userRepo;
+	
+	@Autowired
+	CustomUserDetailsService service;
+	
+	@Autowired
+	TwoFactorOTPService twoFactorService;
+	
+	@Autowired
+	private WatchListService watchListService;
+	
+	@Autowired
+	EmailService emailService;
+	
+	
+//	@PostMapping("/signup")
+//	public ResponseEntity<AuthResponse>register(@RequestBody User user) throws Exception{
+//	
+//		User isEmailExists=userRepo.findByEmail(user.getEmail());
+//		if(isEmailExists !=null) {
+//			throw new Exception("Email is already used with another account");
+//		}
+//		
+//		
+//		
+//		User newUser=new User();
+//		newUser.setEmail(user.getEmail());
+//		newUser.setPassword(user.getPassword());
+//		newUser.setFullName(user.getFullName());
+//		
+//		User savedUser=userRepo.save(newUser);
+//		
+//		watchListService.createWatchList(savedUser);
+//		
+//		UsernamePasswordAuthenticationToken auth=new UsernamePasswordAuthenticationToken(
+//				user.getEmail(),
+//				user.getPassword()
+//				);
+//		
+//		
+//		SecurityContextHolder.getContext().setAuthentication(auth);
+//		
+//		
+//		String jwt=JwtProvider.generateToken(auth);
+//		AuthResponse authResponse=new AuthResponse();
+//		authResponse.setJwt(jwt);
+//		authResponse.setStatus(true);
+//		authResponse.setFullName(user.getFullName());
+//		authResponse.setMessage("Register Success");
+//		return new ResponseEntity<>(authResponse,HttpStatus.CREATED);
+//	}
+//	
+	
+	
+	@PostMapping("/signup")
+	public ResponseEntity<?> register(@RequestBody User user) {
+	    User isEmailExists = userRepo.findByEmail(user.getEmail());
+	    if (isEmailExists != null) {
+	        return ResponseEntity
+	                .status(HttpStatus.BAD_REQUEST)
+	                .body(Collections.singletonMap("message", "Email is already used with another account"));
+	    }
+
+	    User newUser = new User();
+	    newUser.setEmail(user.getEmail());
+	    newUser.setPassword(user.getPassword());
+	    newUser.setFullName(user.getFullName());
+
+	    User savedUser = userRepo.save(newUser);
+	    watchListService.createWatchList(savedUser);
+
+	    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+	            user.getEmail(),
+	            user.getPassword()
+	    );
+
+	    SecurityContextHolder.getContext().setAuthentication(auth);
+
+	    String jwt = JwtProvider.generateToken(auth);
+	    AuthResponse authResponse = new AuthResponse();
+	    authResponse.setJwt(jwt);
+	    authResponse.setStatus(true);
+	    authResponse.setFullName(user.getFullName());
+	    authResponse.setMessage("Register Success");
+	    
+	    return new ResponseEntity<>(authResponse, HttpStatus.CREATED);
+	}
+
+	
+	
+	
+	
+	@PostMapping("/signin")
+	public ResponseEntity<AuthResponse>login(@RequestBody User user) throws Exception{
+	
+		String username=user.getEmail();
+		String password=user.getPassword();
+		
+		Authentication auth=authenticate(username,password);
+		
+		
+		SecurityContextHolder.getContext().setAuthentication(auth);
+		
+		
+		String jwt=JwtProvider.generateToken(auth);
+		
+		User user1=userRepo.findByEmail(username);
+		
+//		if(user.getTwoFactorAuth().isEnabled()) {
+//			AuthResponse res=new AuthResponse();
+//			res.setMessage("Two Factor auth is enabled");
+//			res.setTwoFactorAuthEnable(true);
+//			String otp=OtpUtils.generateOTP();
+//			TwoFactorOTP oldTwoFactorOTP=twoFactorService.findByUser(user1.getId());
+//			if(oldTwoFactorOTP!=null) {
+//				twoFactorService.deleteTwoFactorOtp(oldTwoFactorOTP);
+//			}
+//			TwoFactorOTP newOtp=twoFactorService.createTwoFactorOTP(user1, otp, jwt);
+//			emailService.sendVerificationOTPEmail(username, otp);
+//			res.setSession(newOtp.getId());
+//			return new ResponseEntity<AuthResponse>(res,HttpStatus.ACCEPTED);
+//		}
+		
+		AuthResponse authResponse=new AuthResponse();
+		authResponse.setJwt(jwt);
+		authResponse.setFullName(user1.getFullName());
+		authResponse.setStatus(true);
+		authResponse.setMessage("Login Success");
+		return new ResponseEntity<>(authResponse,HttpStatus.CREATED);
+	}
+
+
+
+	private Authentication authenticate(String username, String password) {
+		UserDetails userDetails=service.loadUserByUsername(username);
+		if(userDetails == null) {
+			throw new BadCredentialsException("Invalid Username");
+		}
+		
+		if(!password.equals(userDetails.getPassword())) {
+			throw new BadCredentialsException("Invalid Password");
+		}
+		return new UsernamePasswordAuthenticationToken(userDetails,password, userDetails.getAuthorities());
+	}
+	
+	
+	
+//	@PostMapping("/two-factor/otp/{otp}")
+//	public ResponseEntity<AuthResponse>verifySignInOTP(@PathVariable String otp,@RequestParam String id) throws Exception{
+//		TwoFactorOTP twoFactorOTP=twoFactorService.findById(id);
+//		if(twoFactorService.verifytwoFactorOtp(twoFactorOTP, otp)) {
+//			AuthResponse res=new AuthResponse();
+//			res.setMessage("Twp factor authentication verified");
+//			res.setTwoFactorAuthEnable(true);
+//			res.setJwt(twoFactorOTP.getJwt());
+//			return new ResponseEntity<>(res,HttpStatus.OK);
+//		}
+//		throw new Exception("Invalid OTP");
+//		
+//		
+//	}
+	
+}

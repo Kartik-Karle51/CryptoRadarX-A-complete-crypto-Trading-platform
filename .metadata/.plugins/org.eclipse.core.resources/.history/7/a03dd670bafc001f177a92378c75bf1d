@@ -1,0 +1,19 @@
+spring.application.name=Crypto_Currency_Tracker
+
+
+spring.datasource.url=jdbc:mysql://localhost:3306/Crypto_Currency_Tracker
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.password=Enter Your Password
+spring.datasource.username=root
+
+spring.jpa.show-sql=true
+spring.jpa.hibernate.ddl-auto=update
+
+
+
+stripe.api.key=Enter Your Stripe api key 
+
+razorpay.api.key=Enter Your Razorpay api key
+
+razorpay.api.secret=Enter Your Razorpay Secret key
+
